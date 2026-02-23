@@ -1,0 +1,174 @@
+{
+  "visual": {
+    "diceSize": {
+      "value": 60,
+      "description": "骰子尺寸（像素）",
+      "range": "30-100",
+      "unit": "px"
+    },
+    "sceneWidth": {
+      "value": 800,
+      "description": "場景寬度",
+      "range": "600-1200",
+      "unit": "px"
+    },
+    "sceneHeight": {
+      "value": 600,
+      "description": "場景高度",
+      "range": "400-900",
+      "unit": "px"
+    },
+    "perspective": {
+      "value": 2000,
+      "description": "3D透視距離，數值越大透視效果越弱",
+      "range": "1000-3000",
+      "unit": "px"
+    },
+    "sceneRotationX": {
+      "value": 30,
+      "description": "場景X軸旋轉角度（俯視角度）",
+      "range": "0-60",
+      "unit": "度"
+    }
+  },
+  
+  "physics": {
+    "initialVelocity": {
+      "value": 300,
+      "description": "初始速度（影響投擲力度和距離）",
+      "range": "100-500",
+      "unit": "px/s"
+    },
+    "throwDistance": {
+      "value": 400,
+      "description": "投擲起點到目標中心的距離",
+      "range": "200-800",
+      "unit": "px"
+    },
+    "gravity": {
+      "value": 1200,
+      "description": "重力加速度（影響下落速度）",
+      "range": "800-2000",
+      "unit": "px/s²"
+    },
+    "pullHeight": {
+      "min": 200,
+      "max": 300,
+      "description": "拉升高度範圍（隨機）",
+      "unit": "px"
+    },
+    "pullTime": {
+      "min": 150,
+      "max": 250,
+      "description": "拉升時間範圍（隨機）",
+      "unit": "ms"
+    },
+    "spinDuration": {
+      "min": 1600,
+      "max": 2400,
+      "description": "旋轉持續時間範圍（隨機）",
+      "unit": "ms"
+    },
+    "moveDuration": {
+      "min": 1400,
+      "max": 2000,
+      "description": "移動持續時間範圍（隨機）",
+      "unit": "ms"
+    },
+    "bounceFrequency": {
+      "min": 2.2,
+      "max": 3.2,
+      "description": "彈跳頻率範圍（數值越大彈跳次數越多）",
+      "unit": "次"
+    },
+    "tiltAngle": {
+      "min": -60,
+      "max": 60,
+      "description": "骰子傾斜角度範圍（隨機）",
+      "unit": "度"
+    }
+  },
+  
+  "layout": {
+    "dicePositions": {
+      "description": "三個骰子的目標位置（相對於場景中心的X, Y偏移）",
+      "1": { "x": -160, "y": 0 },
+      "2": { "x": 0, "y": 0 },
+      "3": { "x": 160, "y": 0 }
+    },
+    "targetSpread": {
+      "x": 40,
+      "y": 40,
+      "description": "落點隨機偏移範圍（±值）",
+      "unit": "px"
+    }
+  },
+  
+  "directions": {
+    "description": "投擲方向設定，定義骰子從哪個方向飛入",
+    "available": ["top", "bottom", "left", "right"],
+    "default": "top",
+    "offsets": {
+      "top": {
+        "description": "從上方投擲",
+        "startOffset": { "x": 0, "y": -1 }
+      },
+      "bottom": {
+        "description": "從下方投擲",
+        "startOffset": { "x": 0, "y": 1 }
+      },
+      "left": {
+        "description": "從左側投擲",
+        "startOffset": { "x": -1, "y": 0 }
+      },
+      "right": {
+        "description": "從右側投擲",
+        "startOffset": { "x": 1, "y": 0 }
+      }
+    }
+  },
+  
+  "animation": {
+    "spinRotation": {
+      "value": 1080,
+      "description": "旋轉圈數對應的角度（3圈）",
+      "range": "720-1800",
+      "unit": "度"
+    },
+    "shadowOpacity": {
+      "value": 0.7,
+      "description": "陰影最大不透明度",
+      "range": "0.3-1.0",
+      "unit": "無單位"
+    },
+    "shadowBlur": {
+      "value": 10,
+      "description": "陰影模糊程度",
+      "range": "5-20",
+      "unit": "px"
+    }
+  },
+  
+  "colors": {
+    "background": {
+      "value": "#e5e5e5",
+      "description": "背景顏色"
+    },
+    "diceFace": {
+      "value": "#fff",
+      "description": "骰子面的顏色"
+    },
+    "diceBorder": {
+      "value": "#ccc",
+      "description": "骰子邊框顏色"
+    },
+    "normalDot": {
+      "value": "#333",
+      "description": "一般點數的顏色"
+    },
+    "specialDot": {
+      "value": "#d32f2f",
+      "description": "特殊點數的顏色（1點和4點）"
+    }
+  }
+}
