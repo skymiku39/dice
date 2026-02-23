@@ -31,6 +31,8 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             z-index: 1000;
             max-width: 320px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
         }
 
         .controls h3 {
@@ -95,6 +97,46 @@
 
         .direction-btn.placeholder {
             visibility: hidden;
+        }
+
+        .theme-selector {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .theme-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 16px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 11px;
+            background: #f8f8f8;
+            white-space: nowrap;
+        }
+
+        .theme-btn:hover {
+            border-color: #999;
+            transform: scale(1.05);
+        }
+
+        .theme-btn.active {
+            border-color: #2196F3;
+            box-shadow: 0 0 6px rgba(33,150,243,0.3);
+            font-weight: bold;
+        }
+
+        .theme-btn .color-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.15);
+            flex-shrink: 0;
         }
 
         .scene { 
@@ -258,6 +300,27 @@
     </div>
 
     <div class="control-group">
+        <label>骰子外觀：</label>
+        <div class="theme-selector">
+            <div class="theme-btn active" data-theme="classic">
+                <span class="color-dot" style="background:#fff;border-color:#ccc"></span>經典白
+            </div>
+            <div class="theme-btn" data-theme="dark">
+                <span class="color-dot" style="background:#2d2d44"></span>深色夜光
+            </div>
+            <div class="theme-btn" data-theme="wooden">
+                <span class="color-dot" style="background:#f5e6d0;border-color:#b8860b"></span>木質溫潤
+            </div>
+            <div class="theme-btn" data-theme="ocean">
+                <span class="color-dot" style="background:#e3f2fd;border-color:#90caf9"></span>海洋藍
+            </div>
+            <div class="theme-btn" data-theme="neon">
+                <span class="color-dot" style="background:#1a1a1a;border-color:#00ff88"></span>霓虹派對
+            </div>
+        </div>
+    </div>
+
+    <div class="control-group">
         <label>
             初始速度：<span class="value-display" id="velocityValue">300</span> px/s
         </label>
@@ -302,6 +365,96 @@
         3: { rx: 0, ry: 0, currentX: 160, currentY: 0 } 
     };
     let gridConfig = { 1: [-160, 0], 2: [0, 0], 3: [160, 0] };
+    let currentTheme = 'classic';
+
+    const DICE_THEMES = {
+        classic: {
+            name: '經典白', bgColor: '#e5e5e5',
+            faceColor: '#fff', borderColor: '#ccc',
+            normalDot: '#333', specialDot: '#d32f2f'
+        },
+        dark: {
+            name: '深色夜光', bgColor: '#1a1a2e',
+            faceColor: '#2d2d44', borderColor: '#444466',
+            normalDot: '#e0e0e0', specialDot: '#ff4444'
+        },
+        wooden: {
+            name: '木質溫潤', bgColor: '#d4a574',
+            faceColor: '#f5e6d0', borderColor: '#b8860b',
+            normalDot: '#4a2c0a', specialDot: '#8b0000'
+        },
+        ocean: {
+            name: '海洋藍', bgColor: '#e3f2fd',
+            faceColor: '#ffffff', borderColor: '#90caf9',
+            normalDot: '#1565c0', specialDot: '#e53935'
+        },
+        neon: {
+            name: '霓虹派對', bgColor: '#0a0a0a',
+            faceColor: '#1a1a1a', borderColor: '#333',
+            normalDot: '#00ff88', specialDot: '#ff00aa'
+        }
+    };
+
+    const SOUND_SPRITES = [
+        { start: 0.52, duration: 0.75 },
+        { start: 3.07, duration: 0.51 },
+        { start: 5.32, duration: 0.45 },
+        { start: 7.57, duration: 0.51 },
+        { start: 9.58, duration: 0.57 },
+        { start: 11.56, duration: 0.51 },
+        { start: 13.90, duration: 0.57 },
+        { start: 16.42, duration: 0.42 },
+        { start: 18.73, duration: 0.45 },
+        { start: 20.86, duration: 0.33 },
+        { start: 22.66, duration: 0.51 }
+    ];
+
+    let audioCtx = null;
+    let audioBuffer = null;
+    let audioGain = null;
+
+    async function initAudio() {
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioGain = audioCtx.createGain();
+            audioGain.connect(audioCtx.destination);
+            audioGain.gain.value = config?.sound?.volume?.value ?? 1.0;
+            const soundFile = config?.sound?.file?.value || './voice/347807__andresix__dice_rolls_15cm.wav';
+            const response = await fetch(soundFile);
+            const arrayBuffer = await response.arrayBuffer();
+            audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            console.log('音效系統初始化完成');
+        } catch (error) {
+            console.warn('音效載入失敗:', error);
+        }
+    }
+
+    function playRandomRollSound() {
+        if (!audioCtx || !audioBuffer) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const sprites = config?.sound?.sprites?.segments || SOUND_SPRITES;
+        const sprite = sprites[Math.floor(Math.random() * sprites.length)];
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioGain);
+        source.start(0, sprite.start, sprite.duration);
+    }
+
+    function applyTheme(themeKey) {
+        const theme = DICE_THEMES[themeKey];
+        if (!theme) return;
+        currentTheme = themeKey;
+        const root = document.documentElement;
+        root.style.setProperty('--bg-color', theme.bgColor);
+        root.style.setProperty('--dice-face-color', theme.faceColor);
+        root.style.setProperty('--dice-border-color', theme.borderColor);
+        root.style.setProperty('--normal-dot-color', theme.normalDot);
+        root.style.setProperty('--special-dot-color', theme.specialDot);
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+        const activeBtn = document.querySelector(`.theme-btn[data-theme="${themeKey}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
+        updateInfo(`主題已切換至：${theme.name}`);
+    }
 
     // 載入配置文件
     async function loadConfig() {
@@ -446,6 +599,11 @@
                 });
                 diceEl.appendChild(f);
             }
+            const initRx = Math.floor(Math.random() * 4) * 90;
+            const initRy = Math.floor(Math.random() * 4) * 90;
+            diceState[id].rx = initRx;
+            diceState[id].ry = initRy;
+            diceEl.style.transform = `rotateX(${initRx}deg) rotateY(${initRy}deg)`;
             updateDicePos(id, diceState[id].currentX, diceState[id].currentY, 30, 0, 0.7);
         });
     }
@@ -470,6 +628,7 @@
             return;
         }
 
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         const btn = document.getElementById('rollBtn');
         btn.disabled = true;
 
@@ -503,8 +662,10 @@
 
                 const randomTilt = getRandom(config.physics.tiltAngle.min, config.physics.tiltAngle.max);
 
-                diceState[id].rx += config.animation.spinRotation.value + rotations[res][0];
-                diceState[id].ry += config.animation.spinRotation.value + rotations[res][1];
+                const randomBaseRx = Math.floor(Math.random() * 4) * 90;
+                const randomBaseRy = Math.floor(Math.random() * 4) * 90;
+                diceState[id].rx = randomBaseRx + config.animation.spinRotation.value + rotations[res][0];
+                diceState[id].ry = randomBaseRy + config.animation.spinRotation.value + rotations[res][1];
 
                 const pullHeight = getRandom(config.physics.pullHeight.min, config.physics.pullHeight.max);
                 const pullTime = getRandom(config.physics.pullTime.min, config.physics.pullTime.max);
@@ -544,6 +705,8 @@
 
     function animatePhysicalMove(id, animConfig, onComplete) {
         let start = null;
+        let soundPlayed = false;
+        let prevBounce = Infinity;
         const halfSize = 30; 
         const { duration, startHeight, startX, startY, targetX, targetY, tilt, freq } = animConfig;
 
@@ -559,16 +722,19 @@
                 return;
             }
 
-            // 垂直位移 (Z)
             const bounce = Math.abs(Math.cos(p * Math.PI * freq)) * Math.pow(1 - p, 1.5) * startHeight;
             const z = bounce + halfSize;
 
-            // 水平慣性位移 (X, Y) - 使用 easeOut 讓移動平滑
+            if (!soundPlayed && prevBounce > 5 && bounce <= 5 && p > 0.1) {
+                soundPlayed = true;
+                playRandomRollSound();
+            }
+            prevBounce = bounce;
+
             const easeOut = 1 - Math.pow(1 - p, 3);
             const currentX = startX + (targetX - startX) * easeOut;
             const currentY = startY + (targetY - startY) * easeOut;
 
-            // 更新陰影透明度
             const shOpacity = Math.max(0, config.animation.shadowOpacity.value - (bounce / startHeight));
 
             updateDicePos(id, currentX, currentY, z, tilt, shOpacity);
@@ -599,10 +765,17 @@
         document.getElementById('gravityValue').textContent = this.value;
     });
 
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            applyTheme(this.dataset.theme);
+        });
+    });
+
     // 初始化
     window.onload = async () => {
         await loadConfig();
         initScene();
+        initAudio();
         console.log('骰子系統初始化完成');
         console.log('當前配置:', config);
     };
