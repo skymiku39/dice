@@ -191,7 +191,7 @@
         border: 1px solid var(--dice-border-color, #ccc);
         border-radius: 10px;
         display: grid;
-        padding: 6px;
+        padding: var(--face-padding, 6px);
         box-sizing: border-box;
         grid-template: repeat(3, 1fr) / repeat(3, 1fr);
         backface-visibility: hidden;
@@ -401,6 +401,37 @@
           min="6"
           max="16"
           value="10"
+          step="1"
+        />
+      </div>
+
+      <div class="control-group">
+        <label>
+          一點大小：<span class="value-display" id="dot1SizeValue">20</span> px
+        </label>
+        <input
+          type="range"
+          id="dot1SizeSlider"
+          min="12"
+          max="30"
+          value="20"
+          step="1"
+        />
+      </div>
+
+      <div class="control-group">
+        <label>
+          點距（靠近中心）：<span class="value-display" id="dotInsetValue"
+            >6</span
+          >
+          px
+        </label>
+        <input
+          type="range"
+          id="dotInsetSlider"
+          min="2"
+          max="14"
+          value="6"
           step="1"
         />
       </div>
@@ -1057,9 +1088,27 @@
             "--dot-size",
             size + "px",
           );
+        });
+
+      document
+        .getElementById("dot1SizeSlider")
+        .addEventListener("input", function () {
+          const size = parseInt(this.value);
+          document.getElementById("dot1SizeValue").textContent = size;
           document.documentElement.style.setProperty(
             "--special-dot-size",
-            size * 2 + "px",
+            size + "px",
+          );
+        });
+
+      document
+        .getElementById("dotInsetSlider")
+        .addEventListener("input", function () {
+          const val = parseInt(this.value);
+          document.getElementById("dotInsetValue").textContent = val;
+          document.documentElement.style.setProperty(
+            "--face-padding",
+            val + "px",
           );
         });
 
