@@ -474,75 +474,90 @@
         },
       };
 
-      const SOUND_SPRITES = [
-        { start: 0.52, duration: 0.75 },
-        { start: 3.07, duration: 0.51 },
-        { start: 5.32, duration: 0.45 },
-        { start: 7.57, duration: 0.51 },
-        { start: 9.58, duration: 0.57 },
-        { start: 11.56, duration: 0.51 },
-        { start: 13.9, duration: 0.57 },
-        { start: 16.42, duration: 0.42 },
-        { start: 18.73, duration: 0.45 },
-        { start: 20.86, duration: 0.33 },
-        { start: 22.66, duration: 0.51 },
-      ];
+      const DEFAULT_CLIP_COUNT = 11;
+      const DEFAULT_CLIP_DIR = "./voice/clips/";
 
       let audioCtx = null;
-      let audioBuffer = null;
       let audioGain = null;
-      let audioFallbackSrc = null;
+      let audioBuffers = [];
+      let audioFallbackClips = [];
       let audioUnlocked = false;
 
+      function getClipPaths() {
+        if (config?.sound?.clips) return config.sound.clips;
+        const dir = config?.sound?.clipDir?.value || DEFAULT_CLIP_DIR;
+        const count = config?.sound?.clipCount?.value || DEFAULT_CLIP_COUNT;
+        return Array.from(
+          { length: count },
+          (_, i) => `${dir}hit_${String(i + 1).padStart(2, "0")}.wav`,
+        );
+      }
+
       async function initAudio() {
-        const soundFile =
-          config?.sound?.file?.value ||
-          "./voice/347807__andresix__dice_rolls_15cm.wav";
+        const clips = getClipPaths();
+        const volume = config?.sound?.volume?.value ?? 1.0;
+
         try {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           audioGain = audioCtx.createGain();
           audioGain.connect(audioCtx.destination);
-          audioGain.gain.value = config?.sound?.volume?.value ?? 1.0;
-          const response = await fetch(soundFile);
-          const arrayBuffer = await response.arrayBuffer();
-          audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-          console.log("音效系統初始化完成 (Web Audio API)");
-          return;
+          audioGain.gain.value = volume;
+          const results = await Promise.allSettled(
+            clips.map(async (src) => {
+              const resp = await fetch(src);
+              const buf = await resp.arrayBuffer();
+              return audioCtx.decodeAudioData(buf);
+            }),
+          );
+          audioBuffers = results
+            .filter((r) => r.status === "fulfilled")
+            .map((r) => r.value);
+          if (audioBuffers.length > 0) {
+            console.log(
+              `音效系統初始化完成 (Web Audio API, ${audioBuffers.length} clips)`,
+            );
+            return;
+          }
         } catch (e) {
           console.warn("Web Audio API 載入失敗，使用 HTML Audio 備援:", e);
           audioCtx = null;
         }
+
         try {
-          const testAudio = new Audio(soundFile);
-          testAudio.preload = "auto";
-          testAudio.load();
-          audioFallbackSrc = soundFile;
-          console.log("音效系統初始化完成 (HTML Audio)");
+          clips.forEach((src) => {
+            const a = new Audio(src);
+            a.preload = "auto";
+            a.volume = volume;
+            a.load();
+            audioFallbackClips.push(a);
+          });
+          console.log(
+            `音效系統初始化完成 (HTML Audio, ${audioFallbackClips.length} clips)`,
+          );
         } catch (e) {
           console.warn("音效系統完全不可用:", e);
         }
       }
 
       function playRandomRollSound() {
-        const sprites = config?.sound?.sprites?.segments || SOUND_SPRITES;
-        const sprite = sprites[Math.floor(Math.random() * sprites.length)];
-        if (audioCtx && audioBuffer) {
+        if (audioCtx && audioBuffers.length > 0) {
           if (audioCtx.state === "suspended") audioCtx.resume();
+          const buf =
+            audioBuffers[Math.floor(Math.random() * audioBuffers.length)];
           const source = audioCtx.createBufferSource();
-          source.buffer = audioBuffer;
+          source.buffer = buf;
           source.connect(audioGain);
-          source.start(0, sprite.start, sprite.duration);
+          source.start(0);
           return;
         }
-        if (audioFallbackSrc) {
-          const sound = new Audio(audioFallbackSrc);
+        if (audioFallbackClips.length > 0) {
+          const tpl =
+            audioFallbackClips[
+              Math.floor(Math.random() * audioFallbackClips.length)
+            ];
+          const sound = tpl.cloneNode();
           sound.volume = config?.sound?.volume?.value ?? 1.0;
-          sound.currentTime = sprite.start;
           sound.play().catch(() => {});
-          setTimeout(() => {
-            sound.pause();
-            sound.src = "";
-          }, sprite.duration * 1000 + 100);
         }
       }
 
@@ -818,8 +833,8 @@
         }
 
         if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
-        if (audioFallbackSrc && !audioUnlocked) {
-          const u = new Audio(audioFallbackSrc);
+        if (audioFallbackClips.length > 0 && !audioUnlocked) {
+          const u = audioFallbackClips[0].cloneNode();
           u.volume = 0;
           u.play()
             .then(() => {

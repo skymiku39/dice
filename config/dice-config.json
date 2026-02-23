@@ -173,30 +173,18 @@
   },
 
   "sound": {
-    "file": {
-      "value": "./voice/347807__andresix__dice_rolls_15cm.wav",
-      "description": "骰子滾動音效檔路徑"
+    "clipDir": {
+      "value": "./voice/clips/",
+      "description": "骰子碰撞音效資料夾路徑"
+    },
+    "clipCount": {
+      "value": 11,
+      "description": "音效檔數量（檔名格式 hit_01.wav ~ hit_11.wav）"
     },
     "volume": {
       "value": 1.0,
       "description": "音效音量",
       "range": "0-1"
-    },
-    "sprites": {
-      "description": "音訊時間軸定義，每段包含起始秒數(start)和持續秒數(duration)",
-      "segments": [
-        { "start": 0.52, "duration": 0.75 },
-        { "start": 3.07, "duration": 0.51 },
-        { "start": 5.32, "duration": 0.45 },
-        { "start": 7.57, "duration": 0.51 },
-        { "start": 9.58, "duration": 0.57 },
-        { "start": 11.56, "duration": 0.51 },
-        { "start": 13.90, "duration": 0.57 },
-        { "start": 16.42, "duration": 0.42 },
-        { "start": 18.73, "duration": 0.45 },
-        { "start": 20.86, "duration": 0.33 },
-        { "start": 22.66, "duration": 0.51 }
-      ]
     }
   }
 }
