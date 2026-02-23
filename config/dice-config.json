@@ -31,7 +31,7 @@
       "unit": "度"
     }
   },
-  
+
   "physics": {
     "initialVelocity": {
       "value": 300,
@@ -88,7 +88,7 @@
       "unit": "度"
     }
   },
-  
+
   "layout": {
     "dicePositions": {
       "description": "三個骰子的目標位置（相對於場景中心的X, Y偏移）",
@@ -103,7 +103,7 @@
       "unit": "px"
     }
   },
-  
+
   "directions": {
     "description": "投擲方向設定，定義骰子從哪個方向飛入",
     "available": ["top", "bottom", "left", "right"],
@@ -127,7 +127,7 @@
       }
     }
   },
-  
+
   "animation": {
     "spinRotation": {
       "value": 1080,
@@ -148,7 +148,7 @@
       "unit": "px"
     }
   },
-  
+
   "colors": {
     "background": {
       "value": "#e5e5e5",
