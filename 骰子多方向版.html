@@ -1226,7 +1226,7 @@
 
             updateDicePos(id, startX, startY, 0, randomTilt, 0);
 
-            const airDelay = getRandom(0, 1000);
+            const airDelay = getRandom(0, 100);
 
             setTimeout(() => {
               wrap.style.transition = `transform ${pullTime}ms ease-out`;
