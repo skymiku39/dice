@@ -201,16 +201,16 @@
       .dot {
         background: var(--normal-dot-color, #333);
         border-radius: 50%;
-        width: 10px;
-        height: 10px;
+        width: var(--dot-size, 10px);
+        height: var(--dot-size, 10px);
         align-self: center;
         justify-self: center;
       }
 
       .face-1 .dot {
         background: var(--special-dot-color, #d32f2f);
-        width: 20px;
-        height: 20px;
+        width: var(--special-dot-size, 20px);
+        height: var(--special-dot-size, 20px);
       }
 
       .face-4 .dot {
@@ -390,6 +390,20 @@
           step="50"
         />
       </div>
+
+      <div class="control-group">
+        <label>
+          點數大小：<span class="value-display" id="dotSizeValue">10</span> px
+        </label>
+        <input
+          type="range"
+          id="dotSizeSlider"
+          min="6"
+          max="16"
+          value="10"
+          step="1"
+        />
+      </div>
     </div>
 
     <div class="scene">
@@ -477,34 +491,59 @@
       let audioCtx = null;
       let audioBuffer = null;
       let audioGain = null;
+      let audioFallbackSrc = null;
+      let audioUnlocked = false;
 
       async function initAudio() {
+        const soundFile =
+          config?.sound?.file?.value ||
+          "./voice/347807__andresix__dice_rolls_15cm.wav";
         try {
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           audioGain = audioCtx.createGain();
           audioGain.connect(audioCtx.destination);
           audioGain.gain.value = config?.sound?.volume?.value ?? 1.0;
-          const soundFile =
-            config?.sound?.file?.value ||
-            "./voice/347807__andresix__dice_rolls_15cm.wav";
           const response = await fetch(soundFile);
           const arrayBuffer = await response.arrayBuffer();
           audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-          console.log("音效系統初始化完成");
-        } catch (error) {
-          console.warn("音效載入失敗:", error);
+          console.log("音效系統初始化完成 (Web Audio API)");
+          return;
+        } catch (e) {
+          console.warn("Web Audio API 載入失敗，使用 HTML Audio 備援:", e);
+          audioCtx = null;
+        }
+        try {
+          const testAudio = new Audio(soundFile);
+          testAudio.preload = "auto";
+          testAudio.load();
+          audioFallbackSrc = soundFile;
+          console.log("音效系統初始化完成 (HTML Audio)");
+        } catch (e) {
+          console.warn("音效系統完全不可用:", e);
         }
       }
 
       function playRandomRollSound() {
-        if (!audioCtx || !audioBuffer) return;
-        if (audioCtx.state === "suspended") audioCtx.resume();
         const sprites = config?.sound?.sprites?.segments || SOUND_SPRITES;
         const sprite = sprites[Math.floor(Math.random() * sprites.length)];
-        const source = audioCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(audioGain);
-        source.start(0, sprite.start, sprite.duration);
+        if (audioCtx && audioBuffer) {
+          if (audioCtx.state === "suspended") audioCtx.resume();
+          const source = audioCtx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(audioGain);
+          source.start(0, sprite.start, sprite.duration);
+          return;
+        }
+        if (audioFallbackSrc) {
+          const sound = new Audio(audioFallbackSrc);
+          sound.volume = config?.sound?.volume?.value ?? 1.0;
+          sound.currentTime = sprite.start;
+          sound.play().catch(() => {});
+          setTimeout(() => {
+            sound.pause();
+            sound.src = "";
+          }, sprite.duration * 1000 + 100);
+        }
       }
 
       function applyTheme(themeKey) {
@@ -735,11 +774,18 @@
             });
             diceEl.appendChild(f);
           }
-          const initRx = Math.floor(Math.random() * 4) * 90;
-          const initRy = Math.floor(Math.random() * 4) * 90;
-          diceState[id].rx = initRx;
-          diceState[id].ry = initRy;
-          diceEl.style.transform = `rotateX(${initRx}deg) rotateY(${initRy}deg)`;
+          const faceRotMap = {
+            1: [0, 0],
+            2: [0, -90],
+            3: [0, -180],
+            4: [0, 90],
+            5: [-90, 0],
+            6: [90, 0],
+          };
+          const initFace = Math.floor(Math.random() * 6) + 1;
+          diceState[id].rx = faceRotMap[initFace][0];
+          diceState[id].ry = faceRotMap[initFace][1];
+          diceEl.style.transform = `rotateX(${diceState[id].rx}deg) rotateY(${diceState[id].ry}deg)`;
           updateDicePos(
             id,
             diceState[id].currentX,
@@ -772,6 +818,16 @@
         }
 
         if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+        if (audioFallbackSrc && !audioUnlocked) {
+          const u = new Audio(audioFallbackSrc);
+          u.volume = 0;
+          u.play()
+            .then(() => {
+              u.pause();
+              audioUnlocked = true;
+            })
+            .catch(() => {});
+        }
         const btn = document.getElementById("rollBtn");
         btn.disabled = true;
 
@@ -822,16 +878,13 @@
               config.physics.tiltAngle.max,
             );
 
-            const randomBaseRx = Math.floor(Math.random() * 4) * 90;
-            const randomBaseRy = Math.floor(Math.random() * 4) * 90;
+            const startFace = Math.floor(Math.random() * 6) + 1;
+            dice.style.transition = "none";
+            dice.style.transform = `rotateX(${rotations[startFace][0]}deg) rotateY(${rotations[startFace][1]}deg)`;
             diceState[id].rx =
-              randomBaseRx +
-              config.animation.spinRotation.value +
-              rotations[res][0];
+              config.animation.spinRotation.value + rotations[res][0];
             diceState[id].ry =
-              randomBaseRy +
-              config.animation.spinRotation.value +
-              rotations[res][1];
+              config.animation.spinRotation.value + rotations[res][1];
 
             const pullHeight = getRandom(
               config.physics.pullHeight.min,
@@ -979,6 +1032,21 @@
           applyTheme(this.dataset.theme);
         });
       });
+
+      document
+        .getElementById("dotSizeSlider")
+        .addEventListener("input", function () {
+          const size = parseInt(this.value);
+          document.getElementById("dotSizeValue").textContent = size;
+          document.documentElement.style.setProperty(
+            "--dot-size",
+            size + "px",
+          );
+          document.documentElement.style.setProperty(
+            "--special-dot-size",
+            size * 2 + "px",
+          );
+        });
 
       // 初始化
       window.onload = async () => {
