@@ -1,784 +1,993 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>骰子多方向投擲版 - 進階物理模擬</title>
     <style>
-        :root {
-            --dice-size: 60px;
-            --half-size: 30px; 
-            --offset: 30.1px; 
-        }
-        body {
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center;
-            min-height: 100vh; 
-            margin: 0; 
-            background: var(--bg-color, #e5e5e5); 
-            overflow: hidden;
-            font-family: 'Microsoft JhengHei', sans-serif;
-        }
+      :root {
+        --dice-size: 60px;
+        --half-size: 30px;
+        --offset: 30.1px;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        background: var(--bg-color, #e5e5e5);
+        overflow: hidden;
+        font-family: "Microsoft JhengHei", sans-serif;
+      }
 
-        .controls {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            z-index: 1000;
-            max-width: 320px;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-        }
+      .controls {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        max-width: 320px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
 
-        .controls h3 {
-            margin: 0 0 15px 0;
-            color: #333;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-        }
+      .controls h3 {
+        margin: 0 0 15px 0;
+        color: #333;
+        border-bottom: 2px solid #333;
+        padding-bottom: 10px;
+      }
 
-        .control-group {
-            margin-bottom: 15px;
-        }
+      .control-group {
+        margin-bottom: 15px;
+      }
 
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: bold;
-            font-size: 14px;
-        }
+      .control-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #555;
+        font-weight: bold;
+        font-size: 14px;
+      }
 
-        .control-group input[type="range"] {
-            width: 100%;
-            margin: 5px 0;
-        }
+      .control-group input[type="range"] {
+        width: 100%;
+        margin: 5px 0;
+      }
 
-        .control-group .value-display {
-            display: inline-block;
-            min-width: 60px;
-            text-align: right;
-            color: #2196F3;
-            font-weight: bold;
-        }
+      .control-group .value-display {
+        display: inline-block;
+        min-width: 60px;
+        text-align: right;
+        color: #2196f3;
+        font-weight: bold;
+      }
 
-        .direction-selector {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
-            margin-top: 10px;
-        }
+      .direction-selector {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+        margin-top: 10px;
+      }
 
-        .direction-btn {
-            padding: 10px;
-            background: #f0f0f0;
-            border: 2px solid #ccc;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 12px;
-            text-align: center;
-        }
+      .direction-btn {
+        padding: 10px;
+        background: #f0f0f0;
+        border: 2px solid #ccc;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 12px;
+        text-align: center;
+      }
 
-        .direction-btn:hover {
-            background: #e0e0e0;
-        }
+      .direction-btn:hover {
+        background: #e0e0e0;
+      }
 
-        .direction-btn.active {
-            background: #2196F3;
-            color: white;
-            border-color: #1976D2;
-        }
+      .direction-btn.active {
+        background: #2196f3;
+        color: white;
+        border-color: #1976d2;
+      }
 
-        .direction-btn.placeholder {
-            visibility: hidden;
-        }
+      .direction-btn.placeholder {
+        visibility: hidden;
+      }
 
-        .theme-selector {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-top: 8px;
-        }
+      .theme-selector {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
 
-        .theme-btn {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            border-radius: 16px;
-            border: 2px solid #ddd;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 11px;
-            background: #f8f8f8;
-            white-space: nowrap;
-        }
+      .theme-btn {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 16px;
+        border: 2px solid #ddd;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 11px;
+        background: #f8f8f8;
+        white-space: nowrap;
+      }
 
-        .theme-btn:hover {
-            border-color: #999;
-            transform: scale(1.05);
-        }
+      .theme-btn:hover {
+        border-color: #999;
+        transform: scale(1.05);
+      }
 
-        .theme-btn.active {
-            border-color: #2196F3;
-            box-shadow: 0 0 6px rgba(33,150,243,0.3);
-            font-weight: bold;
-        }
+      .theme-btn.active {
+        border-color: #2196f3;
+        box-shadow: 0 0 6px rgba(33, 150, 243, 0.3);
+        font-weight: bold;
+      }
 
-        .theme-btn .color-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 1px solid rgba(0,0,0,0.15);
-            flex-shrink: 0;
-        }
+      .theme-btn .color-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        flex-shrink: 0;
+      }
 
-        .scene { 
-            width: var(--scene-width, 800px); 
-            height: var(--scene-height, 600px); 
-            perspective: var(--perspective, 2000px); 
-        }
+      .scene {
+        width: var(--scene-width, 800px);
+        height: var(--scene-height, 600px);
+        perspective: var(--perspective, 2000px);
+      }
 
-        .inner-scene {
-            width: 100%; 
-            height: 100%; 
-            position: relative;
-            transform-style: preserve-3d; 
-            transform: rotateX(var(--scene-rotation, 30deg)); 
-        }
+      .inner-scene {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform-style: preserve-3d;
+        transform: rotateX(var(--scene-rotation, 30deg));
+      }
 
-        .shadow-layer, .dice-layer { 
-            position: absolute; 
-            width: 100%; 
-            height: 100%; 
-            transform-style: preserve-3d; 
-        }
+      .shadow-layer,
+      .dice-layer {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        transform-style: preserve-3d;
+      }
 
-        .dice-group {
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            width: var(--dice-size); 
-            height: var(--dice-size);
-            margin-left: calc(var(--dice-size) / -2); 
-            margin-top: calc(var(--dice-size) / -2); 
-            transform-style: preserve-3d;
-        }
+      .dice-group {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: var(--dice-size);
+        height: var(--dice-size);
+        margin-left: calc(var(--dice-size) / -2);
+        margin-top: calc(var(--dice-size) / -2);
+        transform-style: preserve-3d;
+      }
 
-        .dice-wrapper { 
-            transform-style: preserve-3d; 
-            will-change: transform; 
-        }
+      .dice-wrapper {
+        transform-style: preserve-3d;
+        will-change: transform;
+      }
 
-        .dice { 
-            width: var(--dice-size); 
-            height: var(--dice-size); 
-            transform-style: preserve-3d; 
-        }
+      .dice {
+        width: var(--dice-size);
+        height: var(--dice-size);
+        transform-style: preserve-3d;
+      }
 
-        .face {
-            position: absolute; 
-            width: var(--dice-size); 
-            height: var(--dice-size);
-            background: var(--dice-face-color, #fff); 
-            border: 1px solid var(--dice-border-color, #ccc); 
-            border-radius: 10px;
-            display: grid; 
-            padding: 6px; 
-            box-sizing: border-box;
-            grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-            backface-visibility: hidden;
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
-        }
+      .face {
+        position: absolute;
+        width: var(--dice-size);
+        height: var(--dice-size);
+        background: var(--dice-face-color, #fff);
+        border: 1px solid var(--dice-border-color, #ccc);
+        border-radius: 10px;
+        display: grid;
+        padding: 6px;
+        box-sizing: border-box;
+        grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+        backface-visibility: hidden;
+        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+      }
 
-        .dot { 
-            background: var(--normal-dot-color, #333); 
-            border-radius: 50%; 
-            width: 10px; 
-            height: 10px; 
-            align-self: center; 
-            justify-self: center; 
-        }
+      .dot {
+        background: var(--normal-dot-color, #333);
+        border-radius: 50%;
+        width: 10px;
+        height: 10px;
+        align-self: center;
+        justify-self: center;
+      }
 
-        .face-1 .dot { 
-            background: var(--special-dot-color, #d32f2f); 
-            width: 20px; 
-            height: 20px; 
-        }
+      .face-1 .dot {
+        background: var(--special-dot-color, #d32f2f);
+        width: 20px;
+        height: 20px;
+      }
 
-        .face-4 .dot { 
-            background: var(--special-dot-color, #d32f2f); 
-        }
+      .face-4 .dot {
+        background: var(--special-dot-color, #d32f2f);
+      }
 
-        .face-1 { transform: rotateY(0deg) translateZ(var(--offset)); }
-        .face-2 { transform: rotateY(90deg) translateZ(var(--offset)); }
-        .face-3 { transform: rotateY(180deg) translateZ(var(--offset)); }
-        .face-4 { transform: rotateY(-90deg) translateZ(var(--offset)); }
-        .face-5 { transform: rotateX(90deg) translateZ(var(--offset)); }
-        .face-6 { transform: rotateX(-90deg) translateZ(var(--offset)); }
+      .face-1 {
+        transform: rotateY(0deg) translateZ(var(--offset));
+      }
+      .face-2 {
+        transform: rotateY(90deg) translateZ(var(--offset));
+      }
+      .face-3 {
+        transform: rotateY(180deg) translateZ(var(--offset));
+      }
+      .face-4 {
+        transform: rotateY(-90deg) translateZ(var(--offset));
+      }
+      .face-5 {
+        transform: rotateX(90deg) translateZ(var(--offset));
+      }
+      .face-6 {
+        transform: rotateX(-90deg) translateZ(var(--offset));
+      }
 
-        .shadow {
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            width: var(--dice-size); 
-            height: var(--dice-size);
-            margin-left: calc(var(--dice-size) / -2); 
-            margin-top: calc(var(--dice-size) / -2); 
-            background: rgba(0, 0, 0, 0.25); 
-            border-radius: 50%;
-            filter: blur(var(--shadow-blur, 10px)); 
-            opacity: 0; 
-            transform: translateZ(-1px);
-            will-change: transform, opacity;
-        }
+      .shadow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: var(--dice-size);
+        height: var(--dice-size);
+        margin-left: calc(var(--dice-size) / -2);
+        margin-top: calc(var(--dice-size) / -2);
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 50%;
+        filter: blur(var(--shadow-blur, 10px));
+        opacity: 0;
+        transform: translateZ(-1px);
+        will-change: transform, opacity;
+      }
 
-        .roll-button { 
-            z-index: 1000; 
-            margin-top: 50px; 
-            padding: 15px 50px; 
-            cursor: pointer; 
-            border-radius: 50px; 
-            border: none; 
-            background: #222; 
-            color: white; 
-            font-size: 18px;
-            font-weight: bold;
-            transition: 0.3s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
+      .roll-button {
+        z-index: 1000;
+        margin-top: 50px;
+        padding: 15px 50px;
+        cursor: pointer;
+        border-radius: 50px;
+        border: none;
+        background: #222;
+        color: white;
+        font-size: 18px;
+        font-weight: bold;
+        transition: 0.3s;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      }
 
-        .roll-button:hover {
-            background: #444;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-        }
+      .roll-button:hover {
+        background: #444;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      }
 
-        .roll-button:disabled { 
-            background: #888; 
-            cursor: not-allowed;
-            transform: none;
-        }
+      .roll-button:disabled {
+        background: #888;
+        cursor: not-allowed;
+        transform: none;
+      }
 
-        .info {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            font-size: 14px;
-            color: #555;
-        }
+      .info {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        font-size: 14px;
+        color: #555;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    <div class="controls">
+      <h3>🎲 投擲設定</h3>
 
-<div class="controls">
-    <h3>🎲 投擲設定</h3>
-    
-    <div class="control-group">
+      <div class="control-group">
         <label>投擲方向：</label>
         <div class="direction-selector">
-            <div class="direction-btn placeholder"></div>
-            <div class="direction-btn active" data-direction="top">⬇️ 上方</div>
-            <div class="direction-btn placeholder"></div>
-            <div class="direction-btn" data-direction="left">➡️ 左側</div>
-            <div class="direction-btn placeholder"></div>
-            <div class="direction-btn" data-direction="right">⬅️ 右側</div>
-            <div class="direction-btn placeholder"></div>
-            <div class="direction-btn" data-direction="bottom">⬆️ 下方</div>
-            <div class="direction-btn placeholder"></div>
+          <div class="direction-btn placeholder"></div>
+          <div class="direction-btn active" data-direction="top">⬇️ 上方</div>
+          <div class="direction-btn placeholder"></div>
+          <div class="direction-btn" data-direction="left">➡️ 左側</div>
+          <div class="direction-btn placeholder"></div>
+          <div class="direction-btn" data-direction="right">⬅️ 右側</div>
+          <div class="direction-btn placeholder"></div>
+          <div class="direction-btn" data-direction="bottom">⬆️ 下方</div>
+          <div class="direction-btn placeholder"></div>
         </div>
-    </div>
+      </div>
 
-    <div class="control-group">
+      <div class="control-group">
         <label>骰子外觀：</label>
         <div class="theme-selector">
-            <div class="theme-btn active" data-theme="classic">
-                <span class="color-dot" style="background:#fff;border-color:#ccc"></span>經典白
-            </div>
-            <div class="theme-btn" data-theme="dark">
-                <span class="color-dot" style="background:#2d2d44"></span>深色夜光
-            </div>
-            <div class="theme-btn" data-theme="wooden">
-                <span class="color-dot" style="background:#f5e6d0;border-color:#b8860b"></span>木質溫潤
-            </div>
-            <div class="theme-btn" data-theme="ocean">
-                <span class="color-dot" style="background:#e3f2fd;border-color:#90caf9"></span>海洋藍
-            </div>
-            <div class="theme-btn" data-theme="neon">
-                <span class="color-dot" style="background:#1a1a1a;border-color:#00ff88"></span>霓虹派對
-            </div>
+          <div class="theme-btn active" data-theme="classic">
+            <span
+              class="color-dot"
+              style="background: #fff; border-color: #ccc"
+            ></span
+            >經典白
+          </div>
+          <div class="theme-btn" data-theme="dark">
+            <span class="color-dot" style="background: #2d2d44"></span>深色夜光
+          </div>
+          <div class="theme-btn" data-theme="wooden">
+            <span
+              class="color-dot"
+              style="background: #f5e6d0; border-color: #b8860b"
+            ></span
+            >木質溫潤
+          </div>
+          <div class="theme-btn" data-theme="ocean">
+            <span
+              class="color-dot"
+              style="background: #e3f2fd; border-color: #90caf9"
+            ></span
+            >海洋藍
+          </div>
+          <div class="theme-btn" data-theme="neon">
+            <span
+              class="color-dot"
+              style="background: #1a1a1a; border-color: #00ff88"
+            ></span
+            >霓虹派對
+          </div>
         </div>
-    </div>
+      </div>
 
-    <div class="control-group">
+      <div class="control-group">
         <label>
-            初始速度：<span class="value-display" id="velocityValue">300</span> px/s
+          初始速度：<span class="value-display" id="velocityValue">300</span>
+          px/s
         </label>
-        <input type="range" id="velocitySlider" min="100" max="500" value="300" step="10">
-    </div>
+        <input
+          type="range"
+          id="velocitySlider"
+          min="100"
+          max="500"
+          value="300"
+          step="10"
+        />
+      </div>
 
-    <div class="control-group">
+      <div class="control-group">
         <label>
-            投擲距離：<span class="value-display" id="distanceValue">400</span> px
+          投擲距離：<span class="value-display" id="distanceValue">400</span> px
         </label>
-        <input type="range" id="distanceSlider" min="200" max="800" value="400" step="20">
-    </div>
+        <input
+          type="range"
+          id="distanceSlider"
+          min="200"
+          max="800"
+          value="400"
+          step="20"
+        />
+      </div>
 
-    <div class="control-group">
+      <div class="control-group">
         <label>
-            重力：<span class="value-display" id="gravityValue">1200</span> px/s²
+          重力：<span class="value-display" id="gravityValue">1200</span> px/s²
         </label>
-        <input type="range" id="gravitySlider" min="800" max="2000" value="1200" step="50">
+        <input
+          type="range"
+          id="gravitySlider"
+          min="800"
+          max="2000"
+          value="1200"
+          step="50"
+        />
+      </div>
     </div>
-</div>
 
-<div class="scene">
-    <div class="inner-scene">
+    <div class="scene">
+      <div class="inner-scene">
         <div class="shadow-layer" id="shadows"></div>
         <div class="dice-layer" id="dices"></div>
+      </div>
     </div>
-</div>
 
-<button class="roll-button" id="rollBtn" onclick="throwDice()">擲骰子</button>
+    <button class="roll-button" id="rollBtn" onclick="throwDice()">
+      擲骰子
+    </button>
 
-<div class="info">
-    載入配置文件中...
-</div>
+    <div class="info">載入配置文件中...</div>
 
-<script>
-    let config = null;
-    let currentDirection = 'top';
-    const diceIds = [1, 2, 3];
-    const diceState = { 
-        1: { rx: 0, ry: 0, currentX: -160, currentY: 0 }, 
-        2: { rx: 0, ry: 0, currentX: 0, currentY: 0 }, 
-        3: { rx: 0, ry: 0, currentX: 160, currentY: 0 } 
-    };
-    let gridConfig = { 1: [-160, 0], 2: [0, 0], 3: [160, 0] };
-    let currentTheme = 'classic';
+    <script>
+      let config = null;
+      let currentDirection = "top";
+      const diceIds = [1, 2, 3];
+      const diceState = {
+        1: { rx: 0, ry: 0, currentX: -160, currentY: 0 },
+        2: { rx: 0, ry: 0, currentX: 0, currentY: 0 },
+        3: { rx: 0, ry: 0, currentX: 160, currentY: 0 },
+      };
+      let gridConfig = { 1: [-160, 0], 2: [0, 0], 3: [160, 0] };
+      let currentTheme = "classic";
 
-    const DICE_THEMES = {
+      const DICE_THEMES = {
         classic: {
-            name: '經典白', bgColor: '#e5e5e5',
-            faceColor: '#fff', borderColor: '#ccc',
-            normalDot: '#333', specialDot: '#d32f2f'
+          name: "經典白",
+          bgColor: "#e5e5e5",
+          faceColor: "#fff",
+          borderColor: "#ccc",
+          normalDot: "#333",
+          specialDot: "#d32f2f",
         },
         dark: {
-            name: '深色夜光', bgColor: '#1a1a2e',
-            faceColor: '#2d2d44', borderColor: '#444466',
-            normalDot: '#e0e0e0', specialDot: '#ff4444'
+          name: "深色夜光",
+          bgColor: "#1a1a2e",
+          faceColor: "#2d2d44",
+          borderColor: "#444466",
+          normalDot: "#e0e0e0",
+          specialDot: "#ff4444",
         },
         wooden: {
-            name: '木質溫潤', bgColor: '#d4a574',
-            faceColor: '#f5e6d0', borderColor: '#b8860b',
-            normalDot: '#4a2c0a', specialDot: '#8b0000'
+          name: "木質溫潤",
+          bgColor: "#d4a574",
+          faceColor: "#f5e6d0",
+          borderColor: "#b8860b",
+          normalDot: "#4a2c0a",
+          specialDot: "#8b0000",
         },
         ocean: {
-            name: '海洋藍', bgColor: '#e3f2fd',
-            faceColor: '#ffffff', borderColor: '#90caf9',
-            normalDot: '#1565c0', specialDot: '#e53935'
+          name: "海洋藍",
+          bgColor: "#e3f2fd",
+          faceColor: "#ffffff",
+          borderColor: "#90caf9",
+          normalDot: "#1565c0",
+          specialDot: "#e53935",
         },
         neon: {
-            name: '霓虹派對', bgColor: '#0a0a0a',
-            faceColor: '#1a1a1a', borderColor: '#333',
-            normalDot: '#00ff88', specialDot: '#ff00aa'
-        }
-    };
+          name: "霓虹派對",
+          bgColor: "#0a0a0a",
+          faceColor: "#1a1a1a",
+          borderColor: "#333",
+          normalDot: "#00ff88",
+          specialDot: "#ff00aa",
+        },
+      };
 
-    const SOUND_SPRITES = [
+      const SOUND_SPRITES = [
         { start: 0.52, duration: 0.75 },
         { start: 3.07, duration: 0.51 },
         { start: 5.32, duration: 0.45 },
         { start: 7.57, duration: 0.51 },
         { start: 9.58, duration: 0.57 },
         { start: 11.56, duration: 0.51 },
-        { start: 13.90, duration: 0.57 },
+        { start: 13.9, duration: 0.57 },
         { start: 16.42, duration: 0.42 },
         { start: 18.73, duration: 0.45 },
         { start: 20.86, duration: 0.33 },
-        { start: 22.66, duration: 0.51 }
-    ];
+        { start: 22.66, duration: 0.51 },
+      ];
 
-    let audioCtx = null;
-    let audioBuffer = null;
-    let audioGain = null;
+      let audioCtx = null;
+      let audioBuffer = null;
+      let audioGain = null;
 
-    async function initAudio() {
+      async function initAudio() {
         try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            audioGain = audioCtx.createGain();
-            audioGain.connect(audioCtx.destination);
-            audioGain.gain.value = config?.sound?.volume?.value ?? 1.0;
-            const soundFile = config?.sound?.file?.value || './voice/347807__andresix__dice_rolls_15cm.wav';
-            const response = await fetch(soundFile);
-            const arrayBuffer = await response.arrayBuffer();
-            audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            console.log('音效系統初始化完成');
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          audioGain = audioCtx.createGain();
+          audioGain.connect(audioCtx.destination);
+          audioGain.gain.value = config?.sound?.volume?.value ?? 1.0;
+          const soundFile =
+            config?.sound?.file?.value ||
+            "./voice/347807__andresix__dice_rolls_15cm.wav";
+          const response = await fetch(soundFile);
+          const arrayBuffer = await response.arrayBuffer();
+          audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+          console.log("音效系統初始化完成");
         } catch (error) {
-            console.warn('音效載入失敗:', error);
+          console.warn("音效載入失敗:", error);
         }
-    }
+      }
 
-    function playRandomRollSound() {
+      function playRandomRollSound() {
         if (!audioCtx || !audioBuffer) return;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (audioCtx.state === "suspended") audioCtx.resume();
         const sprites = config?.sound?.sprites?.segments || SOUND_SPRITES;
         const sprite = sprites[Math.floor(Math.random() * sprites.length)];
         const source = audioCtx.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(audioGain);
         source.start(0, sprite.start, sprite.duration);
-    }
+      }
 
-    function applyTheme(themeKey) {
+      function applyTheme(themeKey) {
         const theme = DICE_THEMES[themeKey];
         if (!theme) return;
         currentTheme = themeKey;
         const root = document.documentElement;
-        root.style.setProperty('--bg-color', theme.bgColor);
-        root.style.setProperty('--dice-face-color', theme.faceColor);
-        root.style.setProperty('--dice-border-color', theme.borderColor);
-        root.style.setProperty('--normal-dot-color', theme.normalDot);
-        root.style.setProperty('--special-dot-color', theme.specialDot);
-        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-        const activeBtn = document.querySelector(`.theme-btn[data-theme="${themeKey}"]`);
-        if (activeBtn) activeBtn.classList.add('active');
+        root.style.setProperty("--bg-color", theme.bgColor);
+        root.style.setProperty("--dice-face-color", theme.faceColor);
+        root.style.setProperty("--dice-border-color", theme.borderColor);
+        root.style.setProperty("--normal-dot-color", theme.normalDot);
+        root.style.setProperty("--special-dot-color", theme.specialDot);
+        document
+          .querySelectorAll(".theme-btn")
+          .forEach((b) => b.classList.remove("active"));
+        const activeBtn = document.querySelector(
+          `.theme-btn[data-theme="${themeKey}"]`,
+        );
+        if (activeBtn) activeBtn.classList.add("active");
         updateInfo(`主題已切換至：${theme.name}`);
-    }
+      }
 
-    // 載入配置文件
-    async function loadConfig() {
+      // 載入配置文件
+      async function loadConfig() {
         try {
-            const response = await fetch('./config/dice-config.json');
-            config = await response.json();
-            applyConfig();
-            updateInfo('✅ 配置已載入');
+          const response = await fetch("./config/dice-config.json");
+          config = await response.json();
+          applyConfig();
+          updateInfo("✅ 配置已載入");
         } catch (error) {
-            console.error('載入配置失敗:', error);
-            updateInfo('⚠️ 使用預設配置');
-            useDefaultConfig();
+          console.error("載入配置失敗:", error);
+          updateInfo("⚠️ 使用預設配置");
+          useDefaultConfig();
         }
-    }
+      }
 
-    function useDefaultConfig() {
+      function useDefaultConfig() {
         config = {
-            visual: { diceSize: { value: 60 } },
-            physics: { 
-                initialVelocity: { value: 300 },
-                throwDistance: { value: 400 },
-                gravity: { value: 1200 },
-                pullHeight: { min: 200, max: 300 },
-                pullTime: { min: 150, max: 250 },
-                spinDuration: { min: 1600, max: 2400 },
-                moveDuration: { min: 1400, max: 2000 },
-                bounceFrequency: { min: 2.2, max: 3.2 },
-                tiltAngle: { min: -60, max: 60 }
+          visual: { diceSize: { value: 60 } },
+          physics: {
+            initialVelocity: { value: 300 },
+            throwDistance: { value: 400 },
+            gravity: { value: 1200 },
+            pullHeight: { min: 200, max: 300 },
+            pullTime: { min: 150, max: 250 },
+            spinDuration: { min: 1600, max: 2400 },
+            moveDuration: { min: 1400, max: 2000 },
+            bounceFrequency: { min: 2.2, max: 3.2 },
+            tiltAngle: { min: -60, max: 60 },
+          },
+          layout: {
+            dicePositions: {
+              1: { x: -160, y: 0 },
+              2: { x: 0, y: 0 },
+              3: { x: 160, y: 0 },
             },
-            layout: {
-                dicePositions: {
-                    "1": { x: -160, y: 0 },
-                    "2": { x: 0, y: 0 },
-                    "3": { x: 160, y: 0 }
-                },
-                targetSpread: { x: 40, y: 40 }
+            targetSpread: { x: 40, y: 40 },
+          },
+          directions: {
+            default: "top",
+            offsets: {
+              top: { startOffset: { x: 0, y: -1 } },
+              bottom: { startOffset: { x: 0, y: 1 } },
+              left: { startOffset: { x: -1, y: 0 } },
+              right: { startOffset: { x: 1, y: 0 } },
             },
-            directions: {
-                default: 'top',
-                offsets: {
-                    top: { startOffset: { x: 0, y: -1 } },
-                    bottom: { startOffset: { x: 0, y: 1 } },
-                    left: { startOffset: { x: -1, y: 0 } },
-                    right: { startOffset: { x: 1, y: 0 } }
-                }
-            },
-            animation: {
-                spinRotation: { value: 1080 },
-                shadowOpacity: { value: 0.7 },
-                shadowBlur: { value: 10 }
-            }
+          },
+          animation: {
+            spinRotation: { value: 1080 },
+            shadowOpacity: { value: 0.7 },
+            shadowBlur: { value: 10 },
+          },
         };
         applyConfig();
-    }
+      }
 
-    function applyConfig() {
+      function applyConfig() {
         // 更新CSS變量
         const root = document.documentElement;
         if (config.visual) {
-            if (config.visual.diceSize) root.style.setProperty('--dice-size', config.visual.diceSize.value + 'px');
-            if (config.visual.sceneWidth) root.style.setProperty('--scene-width', config.visual.sceneWidth.value + 'px');
-            if (config.visual.sceneHeight) root.style.setProperty('--scene-height', config.visual.sceneHeight.value + 'px');
-            if (config.visual.perspective) root.style.setProperty('--perspective', config.visual.perspective.value + 'px');
-            if (config.visual.sceneRotationX) root.style.setProperty('--scene-rotation', config.visual.sceneRotationX.value + 'deg');
+          if (config.visual.diceSize)
+            root.style.setProperty(
+              "--dice-size",
+              config.visual.diceSize.value + "px",
+            );
+          if (config.visual.sceneWidth)
+            root.style.setProperty(
+              "--scene-width",
+              config.visual.sceneWidth.value + "px",
+            );
+          if (config.visual.sceneHeight)
+            root.style.setProperty(
+              "--scene-height",
+              config.visual.sceneHeight.value + "px",
+            );
+          if (config.visual.perspective)
+            root.style.setProperty(
+              "--perspective",
+              config.visual.perspective.value + "px",
+            );
+          if (config.visual.sceneRotationX)
+            root.style.setProperty(
+              "--scene-rotation",
+              config.visual.sceneRotationX.value + "deg",
+            );
         }
-        
+
         if (config.colors) {
-            if (config.colors.background) root.style.setProperty('--bg-color', config.colors.background.value);
-            if (config.colors.diceFace) root.style.setProperty('--dice-face-color', config.colors.diceFace.value);
-            if (config.colors.diceBorder) root.style.setProperty('--dice-border-color', config.colors.diceBorder.value);
-            if (config.colors.normalDot) root.style.setProperty('--normal-dot-color', config.colors.normalDot.value);
-            if (config.colors.specialDot) root.style.setProperty('--special-dot-color', config.colors.specialDot.value);
+          if (config.colors.background)
+            root.style.setProperty(
+              "--bg-color",
+              config.colors.background.value,
+            );
+          if (config.colors.diceFace)
+            root.style.setProperty(
+              "--dice-face-color",
+              config.colors.diceFace.value,
+            );
+          if (config.colors.diceBorder)
+            root.style.setProperty(
+              "--dice-border-color",
+              config.colors.diceBorder.value,
+            );
+          if (config.colors.normalDot)
+            root.style.setProperty(
+              "--normal-dot-color",
+              config.colors.normalDot.value,
+            );
+          if (config.colors.specialDot)
+            root.style.setProperty(
+              "--special-dot-color",
+              config.colors.specialDot.value,
+            );
         }
 
         if (config.animation && config.animation.shadowBlur) {
-            root.style.setProperty('--shadow-blur', config.animation.shadowBlur.value + 'px');
+          root.style.setProperty(
+            "--shadow-blur",
+            config.animation.shadowBlur.value + "px",
+          );
         }
 
         // 更新骰子位置配置
         if (config.layout && config.layout.dicePositions) {
-            gridConfig = {
-                1: [config.layout.dicePositions["1"].x, config.layout.dicePositions["1"].y],
-                2: [config.layout.dicePositions["2"].x, config.layout.dicePositions["2"].y],
-                3: [config.layout.dicePositions["3"].x, config.layout.dicePositions["3"].y]
-            };
-            diceIds.forEach(id => {
-                diceState[id].currentX = gridConfig[id][0];
-                diceState[id].currentY = gridConfig[id][1];
-            });
+          gridConfig = {
+            1: [
+              config.layout.dicePositions["1"].x,
+              config.layout.dicePositions["1"].y,
+            ],
+            2: [
+              config.layout.dicePositions["2"].x,
+              config.layout.dicePositions["2"].y,
+            ],
+            3: [
+              config.layout.dicePositions["3"].x,
+              config.layout.dicePositions["3"].y,
+            ],
+          };
+          diceIds.forEach((id) => {
+            diceState[id].currentX = gridConfig[id][0];
+            diceState[id].currentY = gridConfig[id][1];
+          });
         }
 
         // 更新滑桿初始值
         if (config.physics) {
-            if (config.physics.initialVelocity) {
-                document.getElementById('velocitySlider').value = config.physics.initialVelocity.value;
-                document.getElementById('velocityValue').textContent = config.physics.initialVelocity.value;
-            }
-            if (config.physics.throwDistance) {
-                document.getElementById('distanceSlider').value = config.physics.throwDistance.value;
-                document.getElementById('distanceValue').textContent = config.physics.throwDistance.value;
-            }
-            if (config.physics.gravity) {
-                document.getElementById('gravitySlider').value = config.physics.gravity.value;
-                document.getElementById('gravityValue').textContent = config.physics.gravity.value;
-            }
+          if (config.physics.initialVelocity) {
+            document.getElementById("velocitySlider").value =
+              config.physics.initialVelocity.value;
+            document.getElementById("velocityValue").textContent =
+              config.physics.initialVelocity.value;
+          }
+          if (config.physics.throwDistance) {
+            document.getElementById("distanceSlider").value =
+              config.physics.throwDistance.value;
+            document.getElementById("distanceValue").textContent =
+              config.physics.throwDistance.value;
+          }
+          if (config.physics.gravity) {
+            document.getElementById("gravitySlider").value =
+              config.physics.gravity.value;
+            document.getElementById("gravityValue").textContent =
+              config.physics.gravity.value;
+          }
         }
 
         // 設定預設方向
         if (config.directions && config.directions.default) {
-            currentDirection = config.directions.default;
+          currentDirection = config.directions.default;
         }
-    }
+      }
 
-    function updateInfo(text) {
-        document.querySelector('.info').textContent = text;
-    }
+      function updateInfo(text) {
+        document.querySelector(".info").textContent = text;
+      }
 
-    const getRandom = (min, max) => Math.random() * (max - min) + min;
+      const getRandom = (min, max) => Math.random() * (max - min) + min;
 
-    function initScene() {
-        const shadowLayer = document.getElementById('shadows');
-        const diceLayer = document.getElementById('dices');
-        const dotMap = { 1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
+      function initScene() {
+        const shadowLayer = document.getElementById("shadows");
+        const diceLayer = document.getElementById("dices");
+        const dotMap = {
+          1: [4],
+          2: [0, 8],
+          3: [0, 4, 8],
+          4: [0, 2, 6, 8],
+          5: [0, 2, 4, 6, 8],
+          6: [0, 2, 3, 5, 6, 8],
+        };
 
-        diceIds.forEach(id => {
-            shadowLayer.innerHTML += `<div id="sh-${id}" class="shadow"></div>`;
-            diceLayer.innerHTML += `
+        diceIds.forEach((id) => {
+          shadowLayer.innerHTML += `<div id="sh-${id}" class="shadow"></div>`;
+          diceLayer.innerHTML += `
                 <div class="dice-group" id="group-${id}">
                     <div class="dice-wrapper" id="wrap-${id}">
                         <div class="dice" id="dice-${id}"></div>
                     </div>
                 </div>`;
-            const diceEl = document.getElementById(`dice-${id}`);
-            for (let i=1; i<=6; i++) {
-                const f = document.createElement('div'); 
-                f.className = `face face-${i}`;
-                dotMap[i].forEach(p => {
-                    const d = document.createElement('div'); 
-                    d.className = 'dot';
-                    d.style.gridArea = `${Math.floor(p/3)+1} / ${p%3+1}`;
-                    f.appendChild(d);
-                });
-                diceEl.appendChild(f);
-            }
-            const initRx = Math.floor(Math.random() * 4) * 90;
-            const initRy = Math.floor(Math.random() * 4) * 90;
-            diceState[id].rx = initRx;
-            diceState[id].ry = initRy;
-            diceEl.style.transform = `rotateX(${initRx}deg) rotateY(${initRy}deg)`;
-            updateDicePos(id, diceState[id].currentX, diceState[id].currentY, 30, 0, 0.7);
+          const diceEl = document.getElementById(`dice-${id}`);
+          for (let i = 1; i <= 6; i++) {
+            const f = document.createElement("div");
+            f.className = `face face-${i}`;
+            dotMap[i].forEach((p) => {
+              const d = document.createElement("div");
+              d.className = "dot";
+              d.style.gridArea = `${Math.floor(p / 3) + 1} / ${(p % 3) + 1}`;
+              f.appendChild(d);
+            });
+            diceEl.appendChild(f);
+          }
+          const initRx = Math.floor(Math.random() * 4) * 90;
+          const initRy = Math.floor(Math.random() * 4) * 90;
+          diceState[id].rx = initRx;
+          diceState[id].ry = initRy;
+          diceEl.style.transform = `rotateX(${initRx}deg) rotateY(${initRy}deg)`;
+          updateDicePos(
+            id,
+            diceState[id].currentX,
+            diceState[id].currentY,
+            30,
+            0,
+            0.7,
+          );
         });
-    }
+      }
 
-    function updateDicePos(id, x, y, z, tilt, shOpacity) {
+      function updateDicePos(id, x, y, z, tilt, shOpacity) {
         const group = document.getElementById(`group-${id}`);
         const wrap = document.getElementById(`wrap-${id}`);
         const sh = document.getElementById(`sh-${id}`);
-        
+
         group.style.transform = `translate3d(${x}px, ${y}px, 0)`;
         wrap.style.transform = `translateZ(${z}px) rotateZ(${tilt}deg)`;
-        
-        const shScale = 1 + ((z - 30) / 120);
+
+        const shScale = 1 + (z - 30) / 120;
         sh.style.transform = `translate3d(${x}px, ${y}px, -2px) scale(${shScale})`;
         sh.style.opacity = shOpacity;
-    }
+      }
 
-    async function throwDice() {
+      async function throwDice() {
         if (!config) {
-            console.error('配置尚未載入');
-            updateInfo('❌ 配置尚未載入');
-            return;
+          console.error("配置尚未載入");
+          updateInfo("❌ 配置尚未載入");
+          return;
         }
 
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-        const btn = document.getElementById('rollBtn');
+        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+        const btn = document.getElementById("rollBtn");
         btn.disabled = true;
 
-        const velocity = parseFloat(document.getElementById('velocitySlider').value);
-        const distance = parseFloat(document.getElementById('distanceSlider').value);
-        const gravity = parseFloat(document.getElementById('gravitySlider').value);
+        const velocity = parseFloat(
+          document.getElementById("velocitySlider").value,
+        );
+        const distance = parseFloat(
+          document.getElementById("distanceSlider").value,
+        );
+        const gravity = parseFloat(
+          document.getElementById("gravitySlider").value,
+        );
 
-        const directionOffset = config.directions.offsets[currentDirection].startOffset;
+        const directionOffset =
+          config.directions.offsets[currentDirection].startOffset;
 
-        const animations = diceIds.map(id => {
-            return new Promise(resolve => {
-                const wrap = document.getElementById(`wrap-${id}`);
-                const dice = document.getElementById(`dice-${id}`);
+        const animations = diceIds.map((id) => {
+          return new Promise((resolve) => {
+            const wrap = document.getElementById(`wrap-${id}`);
+            const dice = document.getElementById(`dice-${id}`);
 
-                const base = gridConfig[id];
-                const spreadX = config.layout.targetSpread.x;
-                const spreadY = config.layout.targetSpread.y;
-                const targetX = base[0] + getRandom(-spreadX, spreadX);
-                const targetY = base[1] + getRandom(-spreadY, spreadY);
-                
-                // 計算起始位置（根據方向）
-                const startX = targetX + directionOffset.x * distance;
-                const startY = targetY + directionOffset.y * distance;
+            const base = gridConfig[id];
+            const spreadX = config.layout.targetSpread.x;
+            const spreadY = config.layout.targetSpread.y;
+            const targetX = base[0] + getRandom(-spreadX, spreadX);
+            const targetY = base[1] + getRandom(-spreadY, spreadY);
 
-                // 設置骰子到起始位置（不可見）
-                diceState[id].currentX = startX;
-                diceState[id].currentY = startY;
+            // 計算起始位置（根據方向）
+            const startX = targetX + directionOffset.x * distance;
+            const startY = targetY + directionOffset.y * distance;
 
-                const res = Math.floor(Math.random() * 6) + 1;
-                const rotations = { 1:[0,0], 2:[0,-90], 3:[0,-180], 4:[0,90], 5:[-90,0], 6:[90,0] };
+            // 設置骰子到起始位置（不可見）
+            diceState[id].currentX = startX;
+            diceState[id].currentY = startY;
 
-                const randomTilt = getRandom(config.physics.tiltAngle.min, config.physics.tiltAngle.max);
+            const res = Math.floor(Math.random() * 6) + 1;
+            const rotations = {
+              1: [0, 0],
+              2: [0, -90],
+              3: [0, -180],
+              4: [0, 90],
+              5: [-90, 0],
+              6: [90, 0],
+            };
 
-                const randomBaseRx = Math.floor(Math.random() * 4) * 90;
-                const randomBaseRy = Math.floor(Math.random() * 4) * 90;
-                diceState[id].rx = randomBaseRx + config.animation.spinRotation.value + rotations[res][0];
-                diceState[id].ry = randomBaseRy + config.animation.spinRotation.value + rotations[res][1];
+            const randomTilt = getRandom(
+              config.physics.tiltAngle.min,
+              config.physics.tiltAngle.max,
+            );
 
-                const pullHeight = getRandom(config.physics.pullHeight.min, config.physics.pullHeight.max);
-                const pullTime = getRandom(config.physics.pullTime.min, config.physics.pullTime.max);
-                
-                // 第一階段：快速拉升（從起始位置）
-                updateDicePos(id, startX, startY, 0, randomTilt, 0);
-                
-                setTimeout(() => {
-                    wrap.style.transition = `transform ${pullTime}ms ease-out`;
-                    wrap.style.transform = `translateZ(${pullHeight}px) rotateZ(${randomTilt}deg)`;
-                    
-                    setTimeout(() => {
-                        wrap.style.transition = 'none';
-                        const spinDuration = getRandom(config.physics.spinDuration.min, config.physics.spinDuration.max);
-                        dice.style.transition = `transform ${spinDuration}ms cubic-bezier(0.15, 0.85, 0.3, 1)`;
-                        dice.style.transform = `rotateX(${diceState[id].rx}deg) rotateY(${diceState[id].ry}deg)`;
-                        
-                        const animConfig = {
-                            duration: getRandom(config.physics.moveDuration.min, config.physics.moveDuration.max),
-                            startHeight: pullHeight,
-                            startX, startY, targetX, targetY,
-                            tilt: randomTilt,
-                            freq: getRandom(config.physics.bounceFrequency.min, config.physics.bounceFrequency.max),
-                            velocity,
-                            gravity
-                        };
+            const randomBaseRx = Math.floor(Math.random() * 4) * 90;
+            const randomBaseRy = Math.floor(Math.random() * 4) * 90;
+            diceState[id].rx =
+              randomBaseRx +
+              config.animation.spinRotation.value +
+              rotations[res][0];
+            diceState[id].ry =
+              randomBaseRy +
+              config.animation.spinRotation.value +
+              rotations[res][1];
 
-                        animatePhysicalMove(id, animConfig, resolve);
-                    }, pullTime);
-                }, 50);
-            });
+            const pullHeight = getRandom(
+              config.physics.pullHeight.min,
+              config.physics.pullHeight.max,
+            );
+            const pullTime = getRandom(
+              config.physics.pullTime.min,
+              config.physics.pullTime.max,
+            );
+
+            // 第一階段：快速拉升（從起始位置）
+            updateDicePos(id, startX, startY, 0, randomTilt, 0);
+
+            setTimeout(() => {
+              wrap.style.transition = `transform ${pullTime}ms ease-out`;
+              wrap.style.transform = `translateZ(${pullHeight}px) rotateZ(${randomTilt}deg)`;
+
+              setTimeout(() => {
+                wrap.style.transition = "none";
+                const spinDuration = getRandom(
+                  config.physics.spinDuration.min,
+                  config.physics.spinDuration.max,
+                );
+                dice.style.transition = `transform ${spinDuration}ms cubic-bezier(0.15, 0.85, 0.3, 1)`;
+                dice.style.transform = `rotateX(${diceState[id].rx}deg) rotateY(${diceState[id].ry}deg)`;
+
+                const animConfig = {
+                  duration: getRandom(
+                    config.physics.moveDuration.min,
+                    config.physics.moveDuration.max,
+                  ),
+                  startHeight: pullHeight,
+                  startX,
+                  startY,
+                  targetX,
+                  targetY,
+                  tilt: randomTilt,
+                  freq: getRandom(
+                    config.physics.bounceFrequency.min,
+                    config.physics.bounceFrequency.max,
+                  ),
+                  velocity,
+                  gravity,
+                };
+
+                animatePhysicalMove(id, animConfig, resolve);
+              }, pullTime);
+            }, 50);
+          });
         });
 
         await Promise.all(animations);
         btn.disabled = false;
-    }
+      }
 
-    function animatePhysicalMove(id, animConfig, onComplete) {
+      function animatePhysicalMove(id, animConfig, onComplete) {
         let start = null;
         let soundPlayed = false;
         let prevBounce = Infinity;
-        const halfSize = 30; 
-        const { duration, startHeight, startX, startY, targetX, targetY, tilt, freq } = animConfig;
+        const halfSize = 30;
+        const {
+          duration,
+          startHeight,
+          startX,
+          startY,
+          targetX,
+          targetY,
+          tilt,
+          freq,
+        } = animConfig;
 
         function step(now) {
-            if (!start) start = now;
-            const p = (now - start) / duration;
-            
-            if (p >= 1) {
-                diceState[id].currentX = targetX;
-                diceState[id].currentY = targetY;
-                updateDicePos(id, targetX, targetY, halfSize, tilt, 0.7);
-                if (onComplete) onComplete();
-                return;
-            }
+          if (!start) start = now;
+          const p = (now - start) / duration;
 
-            const bounce = Math.abs(Math.cos(p * Math.PI * freq)) * Math.pow(1 - p, 1.5) * startHeight;
-            const z = bounce + halfSize;
+          if (p >= 1) {
+            diceState[id].currentX = targetX;
+            diceState[id].currentY = targetY;
+            updateDicePos(id, targetX, targetY, halfSize, tilt, 0.7);
+            if (onComplete) onComplete();
+            return;
+          }
 
-            if (!soundPlayed && prevBounce > 5 && bounce <= 5 && p > 0.1) {
-                soundPlayed = true;
-                playRandomRollSound();
-            }
-            prevBounce = bounce;
+          const bounce =
+            Math.abs(Math.cos(p * Math.PI * freq)) *
+            Math.pow(1 - p, 1.5) *
+            startHeight;
+          const z = bounce + halfSize;
 
-            const easeOut = 1 - Math.pow(1 - p, 3);
-            const currentX = startX + (targetX - startX) * easeOut;
-            const currentY = startY + (targetY - startY) * easeOut;
+          if (!soundPlayed && prevBounce > 5 && bounce <= 5 && p > 0.1) {
+            soundPlayed = true;
+            playRandomRollSound();
+          }
+          prevBounce = bounce;
 
-            const shOpacity = Math.max(0, config.animation.shadowOpacity.value - (bounce / startHeight));
+          const easeOut = 1 - Math.pow(1 - p, 3);
+          const currentX = startX + (targetX - startX) * easeOut;
+          const currentY = startY + (targetY - startY) * easeOut;
 
-            updateDicePos(id, currentX, currentY, z, tilt, shOpacity);
-            requestAnimationFrame(step);
+          const shOpacity = Math.max(
+            0,
+            config.animation.shadowOpacity.value - bounce / startHeight,
+          );
+
+          updateDicePos(id, currentX, currentY, z, tilt, shOpacity);
+          requestAnimationFrame(step);
         }
         requestAnimationFrame(step);
-    }
+      }
 
-    // 事件監聽器
-    document.querySelectorAll('.direction-btn:not(.placeholder)').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.direction-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
+      // 事件監聽器
+      document
+        .querySelectorAll(".direction-btn:not(.placeholder)")
+        .forEach((btn) => {
+          btn.addEventListener("click", function () {
+            document
+              .querySelectorAll(".direction-btn")
+              .forEach((b) => b.classList.remove("active"));
+            this.classList.add("active");
             currentDirection = this.dataset.direction;
             updateInfo(`方向已切換至：${this.textContent.trim()}`);
+          });
         });
-    });
 
-    document.getElementById('velocitySlider').addEventListener('input', function() {
-        document.getElementById('velocityValue').textContent = this.value;
-    });
-
-    document.getElementById('distanceSlider').addEventListener('input', function() {
-        document.getElementById('distanceValue').textContent = this.value;
-    });
-
-    document.getElementById('gravitySlider').addEventListener('input', function() {
-        document.getElementById('gravityValue').textContent = this.value;
-    });
-
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            applyTheme(this.dataset.theme);
+      document
+        .getElementById("velocitySlider")
+        .addEventListener("input", function () {
+          document.getElementById("velocityValue").textContent = this.value;
         });
-    });
 
-    // 初始化
-    window.onload = async () => {
+      document
+        .getElementById("distanceSlider")
+        .addEventListener("input", function () {
+          document.getElementById("distanceValue").textContent = this.value;
+        });
+
+      document
+        .getElementById("gravitySlider")
+        .addEventListener("input", function () {
+          document.getElementById("gravityValue").textContent = this.value;
+        });
+
+      document.querySelectorAll(".theme-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          applyTheme(this.dataset.theme);
+        });
+      });
+
+      // 初始化
+      window.onload = async () => {
         await loadConfig();
         initScene();
         initAudio();
-        console.log('骰子系統初始化完成');
-        console.log('當前配置:', config);
-    };
-</script>
-</body>
+        console.log("骰子系統初始化完成");
+        console.log("當前配置:", config);
+      };
+    </script>
+  </body>
 </html>
