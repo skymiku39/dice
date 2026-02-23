@@ -189,7 +189,7 @@
         height: var(--dice-size);
         background: var(--dice-face-color, #fff);
         border: 1px solid var(--dice-border-color, #ccc);
-        border-radius: 10px;
+        border-radius: var(--dice-radius, 10px);
         display: grid;
         padding: var(--face-padding, 6px);
         box-sizing: border-box;
@@ -289,6 +289,53 @@
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         font-size: 14px;
         color: #555;
+      }
+
+      .result-display {
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 22px;
+        font-weight: bold;
+        opacity: 0;
+        transition: opacity 0.4s;
+        z-index: 1000;
+        pointer-events: none;
+      }
+
+      .result-display.visible {
+        opacity: 1;
+      }
+
+      .result-display .dice-val {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        padding: 4px 12px;
+        min-width: 20px;
+        text-align: center;
+      }
+
+      .result-display .result-plus {
+        opacity: 0.5;
+        font-size: 16px;
+      }
+
+      .result-display .result-eq {
+        opacity: 0.5;
+        font-size: 18px;
+      }
+
+      .result-display .result-sum {
+        color: #ffd700;
+        font-size: 26px;
       }
     </style>
   </head>
@@ -435,6 +482,23 @@
           step="1"
         />
       </div>
+
+      <div class="control-group">
+        <label>
+          骰子圓角：<span class="value-display" id="diceRadiusValue"
+            >10</span
+          >
+          px
+        </label>
+        <input
+          type="range"
+          id="diceRadiusSlider"
+          min="0"
+          max="20"
+          value="10"
+          step="1"
+        />
+      </div>
     </div>
 
     <div class="scene">
@@ -447,6 +511,8 @@
     <button class="roll-button" id="rollBtn" onclick="throwDice()">
       擲骰子
     </button>
+
+    <div class="result-display" id="resultDisplay"></div>
 
     <div class="info">載入配置文件中...</div>
 
@@ -570,14 +636,18 @@
         }
       }
 
-      function playRandomRollSound() {
+      function playRandomRollSound(volumeScale) {
+        if (volumeScale === undefined) volumeScale = 1.0;
         if (audioCtx && audioBuffers.length > 0) {
           if (audioCtx.state === "suspended") audioCtx.resume();
           const buf =
             audioBuffers[Math.floor(Math.random() * audioBuffers.length)];
           const source = audioCtx.createBufferSource();
           source.buffer = buf;
-          source.connect(audioGain);
+          const gain = audioCtx.createGain();
+          gain.gain.value = volumeScale;
+          source.connect(gain);
+          gain.connect(audioGain);
           source.start(0);
           return;
         }
@@ -587,7 +657,8 @@
               Math.floor(Math.random() * audioFallbackClips.length)
             ];
           const sound = tpl.cloneNode();
-          sound.volume = config?.sound?.volume?.value ?? 1.0;
+          sound.volume =
+            volumeScale * (config?.sound?.volume?.value ?? 1.0);
           sound.play().catch(() => {});
         }
       }
@@ -890,6 +961,10 @@
         const directionOffset =
           config.directions.offsets[currentDirection].startOffset;
 
+        const resultDisplay = document.getElementById("resultDisplay");
+        resultDisplay.classList.remove("visible");
+
+        const diceResults = {};
         const animations = diceIds.map((id) => {
           return new Promise((resolve) => {
             const wrap = document.getElementById(`wrap-${id}`);
@@ -910,6 +985,7 @@
             diceState[id].currentY = startY;
 
             const res = Math.floor(Math.random() * 6) + 1;
+            diceResults[id] = res;
             const rotations = {
               1: [0, 0],
               2: [0, -90],
@@ -984,12 +1060,35 @@
 
         await Promise.all(animations);
         btn.disabled = false;
+        showResults(diceResults);
+      }
+
+      function showResults(results) {
+        const display = document.getElementById("resultDisplay");
+        const ids = Object.keys(results).sort();
+        const vals = ids.map((id) => results[id]);
+        const sum = vals.reduce((a, b) => a + b, 0);
+
+        let html = "";
+        vals.forEach((v, i) => {
+          if (i > 0) html += '<span class="result-plus">+</span>';
+          html += `<span class="dice-val">${v}</span>`;
+        });
+        if (vals.length > 1) {
+          html += '<span class="result-eq">=</span>';
+          html += `<span class="result-sum">${sum}</span>`;
+        }
+
+        display.innerHTML = html;
+        display.classList.add("visible");
       }
 
       function animatePhysicalMove(id, animConfig, onComplete) {
         let start = null;
-        let soundPlayed = false;
+        let bounceCount = 0;
         let prevBounce = Infinity;
+        let prevPrevBounce = Infinity;
+        const maxBounceSound = 4;
         const halfSize = 30;
         const {
           duration,
@@ -1010,6 +1109,7 @@
             diceState[id].currentX = targetX;
             diceState[id].currentY = targetY;
             updateDicePos(id, targetX, targetY, halfSize, tilt, 0.7);
+            playRandomRollSound(0.12);
             if (onComplete) onComplete();
             return;
           }
@@ -1020,10 +1120,18 @@
             startHeight;
           const z = bounce + halfSize;
 
-          if (!soundPlayed && prevBounce > 5 && bounce <= 5 && p > 0.1) {
-            soundPlayed = true;
-            playRandomRollSound();
+          if (
+            prevPrevBounce > prevBounce &&
+            prevBounce <= bounce &&
+            prevBounce < 8 &&
+            p > 0.08 &&
+            bounceCount < maxBounceSound
+          ) {
+            const vol = Math.pow(0.45, bounceCount);
+            playRandomRollSound(vol);
+            bounceCount++;
           }
+          prevPrevBounce = prevBounce;
           prevBounce = bounce;
 
           const easeOut = 1 - Math.pow(1 - p, 3);
@@ -1108,6 +1216,17 @@
           document.getElementById("dotInsetValue").textContent = val;
           document.documentElement.style.setProperty(
             "--face-padding",
+            val + "px",
+          );
+        });
+
+      document
+        .getElementById("diceRadiusSlider")
+        .addEventListener("input", function () {
+          const val = parseInt(this.value);
+          document.getElementById("diceRadiusValue").textContent = val;
+          document.documentElement.style.setProperty(
+            "--dice-radius",
             val + "px",
           );
         });
