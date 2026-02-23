@@ -292,18 +292,61 @@
       }
 
       .settings-btn {
-        width: 100%;
+        flex: 1;
         padding: 8px 0;
         border: 1px solid #ccc;
         border-radius: 6px;
         background: #f5f5f5;
         cursor: pointer;
         font-size: 13px;
-        transition: background 0.2s;
+        transition:
+          background 0.2s,
+          transform 0.1s;
       }
 
       .settings-btn:hover {
         background: #e0e0e0;
+      }
+
+      .settings-btn:active {
+        transform: scale(0.96);
+      }
+
+      .save-btn {
+        background: #4caf50;
+        color: white;
+        border-color: #388e3c;
+      }
+
+      .save-btn:hover {
+        background: #43a047;
+      }
+
+      .save-btn.saved {
+        background: #2e7d32;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 140px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: rgba(0, 0, 0, 0.85);
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 20px;
+        font-size: 14px;
+        opacity: 0;
+        transition:
+          opacity 0.3s,
+          transform 0.3s;
+        z-index: 2000;
+        pointer-events: none;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
       }
 
       .result-display {
@@ -500,9 +543,7 @@
 
       <div class="control-group">
         <label>
-          骰子圓角：<span class="value-display" id="diceRadiusValue"
-            >10</span
-          >
+          骰子圓角：<span class="value-display" id="diceRadiusValue">10</span>
           px
         </label>
         <input
@@ -529,7 +570,13 @@
         />
       </div>
 
-      <div class="control-group" style="margin-top: 8px">
+      <div
+        class="control-group"
+        style="margin-top: 8px; display: flex; gap: 8px"
+      >
+        <button class="settings-btn save-btn" id="saveSettingsBtn">
+          儲存設定
+        </button>
         <button class="settings-btn" id="resetSettingsBtn">重置預設</button>
       </div>
     </div>
@@ -546,6 +593,7 @@
     </button>
 
     <div class="result-display" id="resultDisplay"></div>
+    <div class="toast" id="toast"></div>
 
     <div class="info">載入配置文件中...</div>
 
@@ -690,8 +738,7 @@
               Math.floor(Math.random() * audioFallbackClips.length)
             ];
           const sound = tpl.cloneNode();
-          sound.volume =
-            volumeScale * (config?.sound?.volume?.value ?? 1.0);
+          sound.volume = volumeScale * (config?.sound?.volume?.value ?? 1.0);
           sound.play().catch(() => {});
         }
       }
@@ -707,14 +754,43 @@
         { id: "velocitySlider", display: "velocityValue" },
         { id: "distanceSlider", display: "distanceValue" },
         { id: "gravitySlider", display: "gravityValue" },
-        { id: "dotSizeSlider", display: "dotSizeValue", css: "--dot-size", unit: "px" },
-        { id: "dot1SizeSlider", display: "dot1SizeValue", css: "--special-dot-size", unit: "px" },
-        { id: "dotInsetSlider", display: "dotInsetValue", css: "--face-padding", unit: "px" },
-        { id: "diceRadiusSlider", display: "diceRadiusValue", css: "--dice-radius", unit: "px" },
+        {
+          id: "dotSizeSlider",
+          display: "dotSizeValue",
+          css: "--dot-size",
+          unit: "px",
+        },
+        {
+          id: "dot1SizeSlider",
+          display: "dot1SizeValue",
+          css: "--special-dot-size",
+          unit: "px",
+        },
+        {
+          id: "dotInsetSlider",
+          display: "dotInsetValue",
+          css: "--face-padding",
+          unit: "px",
+        },
+        {
+          id: "diceRadiusSlider",
+          display: "diceRadiusValue",
+          css: "--dice-radius",
+          unit: "px",
+        },
         { id: "volumeSlider", display: "volumeValue" },
       ];
 
-      function saveSettings() {
+      function showToast(msg, duration) {
+        if (!duration) duration = 1500;
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        clearTimeout(el._timer);
+        el._timer = setTimeout(() => el.classList.remove("show"), duration);
+      }
+
+      function saveSettings(silent) {
         const data = {};
         SLIDER_DEFS.forEach((s) => {
           data[s.id] = document.getElementById(s.id).value;
@@ -722,6 +798,7 @@
         data.direction = currentDirection;
         data.theme = currentTheme;
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+        if (!silent) showToast("設定已儲存");
       }
 
       function loadSettings() {
@@ -741,11 +818,16 @@
               );
             }
           });
-          if (data.volumeSlider != null) applyVolume(parseInt(data.volumeSlider));
+          if (data.volumeSlider != null)
+            applyVolume(parseInt(data.volumeSlider));
           if (data.direction) {
             currentDirection = data.direction;
-            document.querySelectorAll(".direction-btn").forEach((b) => b.classList.remove("active"));
-            const ab = document.querySelector(`.direction-btn[data-direction="${data.direction}"]`);
+            document
+              .querySelectorAll(".direction-btn")
+              .forEach((b) => b.classList.remove("active"));
+            const ab = document.querySelector(
+              `.direction-btn[data-direction="${data.direction}"]`,
+            );
             if (ab) ab.classList.add("active");
           }
           if (data.theme) {
@@ -772,8 +854,12 @@
         });
         applyVolume(100);
         currentDirection = "top";
-        document.querySelectorAll(".direction-btn").forEach((b) => b.classList.remove("active"));
-        const topBtn = document.querySelector('.direction-btn[data-direction="top"]');
+        document
+          .querySelectorAll(".direction-btn")
+          .forEach((b) => b.classList.remove("active"));
+        const topBtn = document.querySelector(
+          '.direction-btn[data-direction="top"]',
+        );
         if (topBtn) topBtn.classList.add("active");
         applyTheme("classic");
       }
@@ -1121,9 +1207,13 @@
             const extraSpinX = Math.floor(getRandom(-2, 3)) * 360;
             const extraSpinY = Math.floor(getRandom(-2, 3)) * 360;
             diceState[id].rx =
-              config.animation.spinRotation.value + extraSpinX + rotations[res][0];
+              config.animation.spinRotation.value +
+              extraSpinX +
+              rotations[res][0];
             diceState[id].ry =
-              config.animation.spinRotation.value + extraSpinY + rotations[res][1];
+              config.animation.spinRotation.value +
+              extraSpinY +
+              rotations[res][1];
 
             const pullHeight = getRandom(
               config.physics.pullHeight.min,
@@ -1134,9 +1224,9 @@
               config.physics.pullTime.max,
             );
 
-            const staggerDelay = index * getRandom(60, 150);
-
             updateDicePos(id, startX, startY, 0, randomTilt, 0);
+
+            const airDelay = getRandom(0, 1000);
 
             setTimeout(() => {
               wrap.style.transition = `transform ${pullTime}ms ease-out`;
@@ -1144,10 +1234,11 @@
 
               setTimeout(() => {
                 wrap.style.transition = "none";
-                const spinDuration = getRandom(
-                  config.physics.spinDuration.min,
-                  config.physics.spinDuration.max,
-                );
+                const spinDuration =
+                  getRandom(
+                    config.physics.spinDuration.min,
+                    config.physics.spinDuration.max,
+                  ) + airDelay;
                 dice.style.transition = `transform ${spinDuration}ms cubic-bezier(0.15, 0.85, 0.3, 1)`;
                 dice.style.transform = `rotateX(${diceState[id].rx}deg) rotateY(${diceState[id].ry}deg)`;
 
@@ -1170,9 +1261,11 @@
                   gravity,
                 };
 
-                animatePhysicalMove(id, animConfig, resolve);
+                setTimeout(() => {
+                  animatePhysicalMove(id, animConfig, resolve);
+                }, airDelay);
               }, pullTime);
-            }, 50 + staggerDelay);
+            }, 50);
           });
         });
 
@@ -1278,7 +1371,7 @@
             this.classList.add("active");
             currentDirection = this.dataset.direction;
             updateInfo(`方向已切換至：${this.textContent.trim()}`);
-            saveSettings();
+            saveSettings(true);
           });
         });
 
@@ -1286,27 +1379,27 @@
         .getElementById("velocitySlider")
         .addEventListener("input", function () {
           document.getElementById("velocityValue").textContent = this.value;
-          saveSettings();
+          saveSettings(true);
         });
 
       document
         .getElementById("distanceSlider")
         .addEventListener("input", function () {
           document.getElementById("distanceValue").textContent = this.value;
-          saveSettings();
+          saveSettings(true);
         });
 
       document
         .getElementById("gravitySlider")
         .addEventListener("input", function () {
           document.getElementById("gravityValue").textContent = this.value;
-          saveSettings();
+          saveSettings(true);
         });
 
       document.querySelectorAll(".theme-btn").forEach((btn) => {
         btn.addEventListener("click", function () {
           applyTheme(this.dataset.theme);
-          saveSettings();
+          saveSettings(true);
         });
       });
 
@@ -1315,11 +1408,8 @@
         .addEventListener("input", function () {
           const size = parseInt(this.value);
           document.getElementById("dotSizeValue").textContent = size;
-          document.documentElement.style.setProperty(
-            "--dot-size",
-            size + "px",
-          );
-          saveSettings();
+          document.documentElement.style.setProperty("--dot-size", size + "px");
+          saveSettings(true);
         });
 
       document
@@ -1331,7 +1421,7 @@
             "--special-dot-size",
             size + "px",
           );
-          saveSettings();
+          saveSettings(true);
         });
 
       document
@@ -1343,7 +1433,7 @@
             "--face-padding",
             val + "px",
           );
-          saveSettings();
+          saveSettings(true);
         });
 
       document
@@ -1355,7 +1445,7 @@
             "--dice-radius",
             val + "px",
           );
-          saveSettings();
+          saveSettings(true);
         });
 
       document
@@ -1364,12 +1454,21 @@
           const val = parseInt(this.value);
           document.getElementById("volumeValue").textContent = val;
           applyVolume(val);
+          saveSettings(true);
+        });
+
+      document
+        .getElementById("saveSettingsBtn")
+        .addEventListener("click", function () {
           saveSettings();
         });
 
       document
         .getElementById("resetSettingsBtn")
-        .addEventListener("click", resetSettings);
+        .addEventListener("click", function () {
+          resetSettings();
+          showToast("已重置為預設值");
+        });
 
       // 初始化
       window.onload = async () => {
