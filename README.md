@@ -67,7 +67,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:28888/api/roll -ContentType
 
 ```powershell
 .\examples\roll.ps1
-.\examples\roll.ps1 -Direction top -Values 1,2,3
+.\examples\roll.ps1 -Direction top -Values "1,2,3"
 ```
 
 ### 也可只用 GitHub Pages + 橋接
