@@ -42,6 +42,7 @@ OBS 的 Browser Source 是**獨立 Chromium**，與你平常開的 Chrome **不�
 cd D:\skymiku\dice
 uv sync
 uv run python tools/control_bridge.py --json
+# 預設埠 28888（避開 Windows 保留的 8765）
 ```
 
 2. OBS → 來源 → 瀏覽器 → URL：
